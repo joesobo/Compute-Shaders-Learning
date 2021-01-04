@@ -1,0 +1,14 @@
+/.vscode
+/Assembly-CSharp.csproj
+/Build
+/Compute Shaders.csproj
+/Compute Shaders.sln
+/Library
+/Logs
+/obj
+/omnisharp.json
+/Packages
+/Program.cs
+/ProjectSettings
+/Temp
+/UserSettings

@@ -1,0 +1,29 @@
+#pragma kernel CSMain
+
+RWStructuredBuffer<float3> _Positions;
+uint _Size;
+float _Step;
+
+float2 GetUV (uint3 id) {
+    return (id.xy + 0.5) * _Step - 1.0;
+}
+
+void SetPosition (uint3 id, float3 position) {
+    if (id.x < _Size && id.y < _Size) {
+        _Positions[id.x + id.y * _Size] = position;
+    }
+}
+
+float3 Square (float u, float v) {
+    float3 p;
+    p.x = u;
+    p.y = 0;
+    p.z = v;
+    return p;
+}
+
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID) {
+    float2 uv = GetUV(id);
+    SetPosition(id, Square(uv.x, uv.y));
+}
