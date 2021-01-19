@@ -2,10 +2,9 @@
 
 RWStructuredBuffer<float3> _Positions;
 uint _Size;
-float _Step;
 
 float2 GetUV (uint3 id) {
-    return (id.xy + 0.5) * _Step - 1.0;
+    return id.xy;
 }
 
 void SetPosition (uint3 id, float3 position) {
@@ -14,16 +13,16 @@ void SetPosition (uint3 id, float3 position) {
     }
 }
 
-float3 Square (float u, float v) {
+float3 Square (float2 uv) {
     float3 p;
-    p.x = u;
-    p.y = 0;
-    p.z = v;
+    p.x = uv.x;
+    p.y = frac(sin(dot(uv,float2(12.9898,78.233)))*43758.5453123);
+    p.z = uv.y;
     return p;
 }
 
 [numthreads(8,8,1)]
 void CSMain (uint3 id : SV_DispatchThreadID) {
     float2 uv = GetUV(id);
-    SetPosition(id, Square(uv.x, uv.y));
+    SetPosition(id, Square(uv));
 }

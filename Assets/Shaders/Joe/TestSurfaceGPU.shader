@@ -14,7 +14,6 @@ Shader "Custom/Test Surface GPU" {
         };
 
         float _Smoothness;
-        float _Step;
 
         #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
 			StructuredBuffer<float3> _Positions;
@@ -26,7 +25,7 @@ Shader "Custom/Test Surface GPU" {
 
                 unity_ObjectToWorld = 0.0;
 				unity_ObjectToWorld._m03_m13_m23_m33 = float4(position, 1.0);
-				unity_ObjectToWorld._m00_m11_m22 = _Step;
+				unity_ObjectToWorld._m00_m11_m22 = 1.0;
 			#endif
 		}
 

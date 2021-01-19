@@ -19,8 +19,7 @@ public class GPUTest : MonoBehaviour {
 
     static readonly int 
         positionsId = Shader.PropertyToID("_Positions"),
-        sizeID = Shader.PropertyToID("_Size"),
-        stepID = Shader.PropertyToID("_Step");
+        sizeID = Shader.PropertyToID("_Size");
 
     private void OnEnable() {
         positionsBuffer = new ComputeBuffer(size * size, 3 * 4);
@@ -36,18 +35,16 @@ public class GPUTest : MonoBehaviour {
     }
 
     private void UpdateFunctionOnGPU() {
-        float step = 2f / size;
+        //float step = 2f / size;
         computeShader.SetInt(sizeID, size);
-        computeShader.SetFloat(stepID, step);
         computeShader.SetBuffer(0, positionsId, positionsBuffer);
 
         int groups = Mathf.CeilToInt(size / 8f);
         computeShader.Dispatch(0, groups, groups, 1);
 
         material.SetBuffer(positionsId, positionsBuffer);
-        material.SetFloat(stepID, step);
         
-        Bounds bounds = new Bounds(Vector3.zero, Vector3.one * (2f + 2f / size));
+        Bounds bounds = new Bounds(Vector3.zero, Vector3.one * size);
         Graphics.DrawMeshInstancedProcedural(mesh, 0, material, bounds, positionsBuffer.count);
     }
 }
