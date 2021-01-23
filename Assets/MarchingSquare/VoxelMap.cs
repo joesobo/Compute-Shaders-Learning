@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 
+[ExecuteInEditMode]
 public class VoxelMap : MonoBehaviour {
     const int threadSize = 8;
 
@@ -24,6 +25,8 @@ public class VoxelMap : MonoBehaviour {
     ComputeBuffer triCountBuffer;
     ComputeBuffer stateBuffer;
 
+    public bool updatingMap = false;
+
     private VoxelStencil[] stencils = {
         new VoxelStencil(),
         new VoxelStencilCircle()
@@ -34,20 +37,35 @@ public class VoxelMap : MonoBehaviour {
         chunkSize = size / chunkResolution;
         voxelSize = chunkSize / voxelResolution;
         statePositions = new int[voxelResolution * voxelResolution];
+    }
 
-        CreateBuffers();
+    private void Update() {
+        if ((Application.isPlaying && !updatingMap)) {
+            updatingMap = true;
 
-        chunks = new VoxelChunk[chunkResolution * chunkResolution];
-        for (int i = 0, y = 0; y < chunkResolution; y++) {
-            for (int x = 0; x < chunkResolution; x++, i++) {
-                CreateChunk(i, x, y);
+            CreateBuffers();
+
+            chunks = new VoxelChunk[chunkResolution * chunkResolution];
+            for (int i = 0, y = 0; y < chunkResolution; y++) {
+                for (int x = 0; x < chunkResolution; x++, i++) {
+                    CreateChunk(i, x, y);
+                }
+            }
+            BoxCollider box = gameObject.AddComponent<BoxCollider>();
+            box.size = new Vector3(size, size);
+
+            if (!Application.isPlaying) {
+                ReleaseBuffers();
             }
         }
-        BoxCollider box = gameObject.AddComponent<BoxCollider>();
-        box.size = new Vector3(size, size);
 
-        if (!Application.isPlaying) {
-            ReleaseBuffers();
+        if (Input.GetMouseButton(0)) {
+            RaycastHit hitInfo;
+            if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hitInfo)) {
+                if (hitInfo.collider.gameObject == gameObject) {
+                    EditVoxels(transform.InverseTransformPoint(hitInfo.point));
+                }
+            }
         }
     }
 
@@ -71,17 +89,6 @@ public class VoxelMap : MonoBehaviour {
             chunks[i - chunkResolution].yNeighbor = chunk;
             if (x > 0) {
                 chunks[i - chunkResolution - 1].xyNeighbor = chunk;
-            }
-        }
-    }
-
-    private void Update() {
-        if (Input.GetMouseButton(0)) {
-            RaycastHit hitInfo;
-            if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hitInfo)) {
-                if (hitInfo.collider.gameObject == gameObject) {
-                    EditVoxels(transform.InverseTransformPoint(hitInfo.point));
-                }
             }
         }
     }
@@ -128,14 +135,15 @@ public class VoxelMap : MonoBehaviour {
         int numPoints = voxelResolution * voxelResolution;
         int numVoxelsPerResolution = voxelResolution - 1;
         int numVoxels = numVoxelsPerResolution * numVoxelsPerResolution;
-        int maxTriangleCount = numVoxels * 5;
+        int maxTriangleCount = numVoxels * 3;
 
+        Debug.Log(verticeBuffer);
         if (!Application.isPlaying || (verticeBuffer == null || numPoints != verticeBuffer.count)) {
             if (Application.isPlaying) {
                 ReleaseBuffers();
             }
             verticeBuffer = new ComputeBuffer(numPoints, sizeof(float) * 3);
-            triangleBuffer = new ComputeBuffer(maxTriangleCount, sizeof(float) * 3 * 3, ComputeBufferType.Append);
+            triangleBuffer = new ComputeBuffer(maxTriangleCount, sizeof(float) * 2 * 3, ComputeBufferType.Append);
             triCountBuffer = new ComputeBuffer(1, sizeof(int), ComputeBufferType.Raw);
             stateBuffer = new ComputeBuffer(numPoints, sizeof(int));
         }
@@ -146,9 +154,7 @@ public class VoxelMap : MonoBehaviour {
             verticeBuffer.Release();
             triangleBuffer.Release();
             triCountBuffer.Release();
-            verticeBuffer = null;
-            triangleBuffer = null;
-            triCountBuffer = null;
+            stateBuffer.Release();
         }
     }
 
@@ -196,11 +202,11 @@ public class VoxelMap : MonoBehaviour {
 
     struct Triangle {
 #pragma warning disable 649 // disable unassigned variable warning
-        public Vector3 a;
-        public Vector3 b;
-        public Vector3 c;
+        public Vector2 a;
+        public Vector2 b;
+        public Vector2 c;
 
-        public Vector3 this[int i] {
+        public Vector2 this[int i] {
             get {
                 switch (i) {
                     case 0:
