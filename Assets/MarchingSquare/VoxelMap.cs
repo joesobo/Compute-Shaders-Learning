@@ -137,7 +137,6 @@ public class VoxelMap : MonoBehaviour {
         int numVoxels = numVoxelsPerResolution * numVoxelsPerResolution;
         int maxTriangleCount = numVoxels * 3;
 
-        Debug.Log(verticeBuffer);
         if (!Application.isPlaying || (verticeBuffer == null || numPoints != verticeBuffer.count)) {
             if (Application.isPlaying) {
                 ReleaseBuffers();
@@ -168,7 +167,8 @@ public class VoxelMap : MonoBehaviour {
         shader.SetBuffer(0, "_Vertices", verticeBuffer);
         shader.SetBuffer(0, "_Triangles", triangleBuffer);
         shader.SetBuffer(0, "_States", stateBuffer);
-        shader.SetInt("_Resolution", voxelResolution);
+        shader.SetInt("_VoxelResolution", voxelResolution);
+        shader.SetInt("_ChunkResolution", chunkResolution);
 
         for (int i = 0; i < chunk.voxels.Length; i++) {
             statePositions[i] = chunk.voxels[i].state ? 1 : 0;
