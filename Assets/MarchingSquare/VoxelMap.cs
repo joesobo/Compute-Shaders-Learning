@@ -8,7 +8,7 @@ public class VoxelMap : MonoBehaviour {
     private static string[] radiusNames = { "0", "1", "2", "3", "4", "5" };
     private static string[] stencilNames = { "Square", "Circle" };
 
-    public float size = 2f;
+    public float chunkSize = 2f;
     public int voxelResolution = 8;
     public int chunkResolution = 2;
     public VoxelChunk voxelGridPrefab;
@@ -16,7 +16,7 @@ public class VoxelMap : MonoBehaviour {
     public ComputeShader shader;
 
     private VoxelChunk[] chunks;
-    private float chunkSize, voxelSize, halfSize;
+    private float voxelSize, halfSize;
     private int fillTypeIndex, radiusIndex, stencilIndex;
     public int[] statePositions;
 
@@ -33,8 +33,7 @@ public class VoxelMap : MonoBehaviour {
     };
 
     private void Awake() {
-        halfSize = size * 0.5f;
-        chunkSize = size / chunkResolution;
+        halfSize = chunkSize * 0.5f * chunkResolution;
         voxelSize = chunkSize / voxelResolution;
         statePositions = new int[(voxelResolution + 1) * (voxelResolution + 1)];
     }
@@ -56,7 +55,7 @@ public class VoxelMap : MonoBehaviour {
                 TriangulateChunk(chunk);
             }
             BoxCollider box = gameObject.AddComponent<BoxCollider>();
-            box.size = new Vector3(size, size);
+            box.size = new Vector3(chunkSize * chunkResolution, chunkSize * chunkResolution);
 
             if (!Application.isPlaying) {
                 ReleaseBuffers();
@@ -192,7 +191,12 @@ public class VoxelMap : MonoBehaviour {
         for (int i = 0; i < numTris; i++) {
             for (int j = 0; j < 3; j++) {
                 triangles[i * 3 + j] = i * 3 + j;
-                vertices[i * 3 + j] = tris[i][j];
+
+                var vertex = tris[i][j];
+                vertex.x = vertex.x * chunkResolution * chunkSize;
+                vertex.y = vertex.y * chunkResolution * chunkSize;
+
+                vertices[i * 3 + j] = vertex;
             }
         }
 
