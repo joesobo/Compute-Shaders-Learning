@@ -18,7 +18,7 @@ public class VoxelMap : MonoBehaviour {
     private VoxelChunk[] chunks;
     private float chunkSize, voxelSize, halfSize;
     private int fillTypeIndex, radiusIndex, stencilIndex;
-    private int[] statePositions;
+    public int[] statePositions;
 
     ComputeBuffer verticeBuffer;
     ComputeBuffer triangleBuffer;
@@ -36,7 +36,7 @@ public class VoxelMap : MonoBehaviour {
         halfSize = size * 0.5f;
         chunkSize = size / chunkResolution;
         voxelSize = chunkSize / voxelResolution;
-        statePositions = new int[voxelResolution * voxelResolution];
+        statePositions = new int[(voxelResolution + 1) * (voxelResolution + 1)];
     }
 
     private void Update() {
@@ -50,6 +50,10 @@ public class VoxelMap : MonoBehaviour {
                 for (int x = 0; x < chunkResolution; x++, i++) {
                     CreateChunk(i, x, y);
                 }
+            }
+
+            foreach (VoxelChunk chunk in chunks) {
+                TriangulateChunk(chunk);
             }
             BoxCollider box = gameObject.AddComponent<BoxCollider>();
             box.size = new Vector3(size, size);
@@ -80,7 +84,6 @@ public class VoxelMap : MonoBehaviour {
         chunk.Initialize(useVoxelPoints, voxelResolution, chunkSize);
         chunk.transform.parent = transform;
         chunk.transform.localPosition = new Vector3(x * chunkSize - halfSize, y * chunkSize - halfSize);
-        TriangulateChunk(chunk);
         chunks[i] = chunk;
         if (x > 0) {
             chunks[i - 1].xNeighbor = chunk;
@@ -132,7 +135,7 @@ public class VoxelMap : MonoBehaviour {
     }
 
     private void CreateBuffers() {
-        int numPoints = voxelResolution * voxelResolution;
+        int numPoints = (voxelResolution + 1) * (voxelResolution + 1);
         int numVoxelsPerResolution = voxelResolution - 1;
         int numVoxels = numVoxelsPerResolution * numVoxelsPerResolution;
         int maxTriangleCount = numVoxels * 3;
@@ -170,9 +173,7 @@ public class VoxelMap : MonoBehaviour {
         shader.SetInt("_VoxelResolution", voxelResolution);
         shader.SetInt("_ChunkResolution", chunkResolution);
 
-        for (int i = 0; i < chunk.voxels.Length; i++) {
-            statePositions[i] = chunk.voxels[i].state ? 1 : 0;
-        }
+        SetupStates(chunk);
         stateBuffer.SetData(statePositions);
 
         shader.Dispatch(0, numThreadsPerResolution, numThreadsPerResolution, 1);
@@ -198,6 +199,39 @@ public class VoxelMap : MonoBehaviour {
         chunk.mesh.vertices = vertices;
         chunk.mesh.triangles = triangles;
         chunk.mesh.RecalculateNormals();
+    }
+
+    private void SetupStates(VoxelChunk chunk) {
+        for (int i = 0, y = 0; y < voxelResolution; y++) {
+            for (int x = 0; x < voxelResolution; x++, i++) {
+                statePositions[y * voxelResolution + x + y] = chunk.voxels[i].state ? 1 : 0;
+            }
+        }
+
+        for (int y = 0; y < voxelResolution; y++) {
+            if (chunk.xNeighbor) {
+                statePositions[y * voxelResolution + voxelResolution + y] = chunk.xNeighbor.voxels[y * voxelResolution].state ? 1 : 0;
+            }
+            else {
+                statePositions[y * voxelResolution + voxelResolution + y] = -1;
+            }
+        }
+
+        for (int x = 0; x < voxelResolution; x++) {
+            if (chunk.yNeighbor) {
+                statePositions[(voxelResolution + 1) * voxelResolution + x] = chunk.yNeighbor.voxels[x].state ? 1 : 0;
+            }
+            else {
+                statePositions[(voxelResolution + 1) * voxelResolution + x] = -1;
+            }
+        }
+
+        if (chunk.xyNeighbor) {
+            statePositions[(voxelResolution + 1) * (voxelResolution + 1) - 1] = chunk.xyNeighbor.voxels[0].state ? 1 : 0;
+        }
+        else {
+            statePositions[(voxelResolution + 1) * (voxelResolution + 1) - 1] = -1;
+        }
     }
 
     struct Triangle {

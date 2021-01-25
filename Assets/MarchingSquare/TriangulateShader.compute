@@ -57,7 +57,7 @@ static int relativeOffsets[8][2] = {
 
 RWStructuredBuffer<float3> _Vertices;
 AppendStructuredBuffer<Triangle> _Triangles;
-RWStructuredBuffer<uint> _States;
+RWStructuredBuffer<int> _States;
 uint _VoxelResolution;
 uint _ChunkResolution;
 
@@ -66,7 +66,7 @@ int2 GetUV (int3 id) {
 }
 
 int indexFromCoord(int x, int y) {
-    return y * _VoxelResolution + x;
+    return y * _VoxelResolution + x + y;
 }
 
 void addTriangle(float2 a, float2 b, float2 c) {
@@ -78,8 +78,8 @@ void addTriangle(float2 a, float2 b, float2 c) {
 }
 
 void TriangulateCellRows(int2 uv) {
-    if (uv.x >= _VoxelResolution-1 || uv.y >= _VoxelResolution-1) {
-        return;
+    if (uv.x >= _VoxelResolution || uv.y >= _VoxelResolution) {
+      return;
     }
 
     float res = float(_VoxelResolution * _ChunkResolution);
@@ -91,6 +91,10 @@ void TriangulateCellRows(int2 uv) {
         _States[indexFromCoord(uv.x + 1, uv.y + 1)],
         _States[indexFromCoord(uv.x, uv.y + 1)],
     };
+
+    // if (squareCornerStates[0] == -1 || squareCornerStates[1] == -1 || squareCornerStates[2] == -1 || squareCornerStates[3] == -1) {
+    //   return;
+    // }
 
     int cellType = 0;
     if (squareCornerStates[0] == 1) cellType |= 1; //A

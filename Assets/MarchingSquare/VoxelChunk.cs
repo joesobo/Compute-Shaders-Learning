@@ -17,7 +17,6 @@ public class VoxelChunk : MonoBehaviour {
     public Mesh mesh;
     private Vector3[] vertices;
     private int[] triangles;
-    private Voxel dummyX, dummyY, dummyT;
 
     public void Initialize(bool useVoxelPoints, int resolution, float size) {
         this.useVoxelPoints = useVoxelPoints;
@@ -26,10 +25,6 @@ public class VoxelChunk : MonoBehaviour {
         gridSize = size;
         voxelSize = size / resolution;
         voxels = new Voxel[resolution * resolution];
-
-        dummyX = new Voxel();
-        dummyY = new Voxel();
-        dummyT = new Voxel();
 
         for (int i = 0, y = 0; y < resolution; y++) {
             for (int x = 0; x < resolution; x++, i++) {
