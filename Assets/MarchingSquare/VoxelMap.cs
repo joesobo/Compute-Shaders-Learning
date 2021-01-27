@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 
-[ExecuteInEditMode]
 public class VoxelMap : MonoBehaviour {
     const int threadSize = 8;
 
@@ -8,24 +7,30 @@ public class VoxelMap : MonoBehaviour {
     private static string[] radiusNames = { "0", "1", "2", "3", "4", "5" };
     private static string[] stencilNames = { "Square", "Circle" };
 
-    public float chunkSize = 2f;
+    [Range(1, 4)]
+    public int chunkSize = 2;
     public int voxelResolution = 8;
     public int chunkResolution = 2;
     public VoxelChunk voxelGridPrefab;
-    public bool useVoxelPoints;
+    public bool useVoxelReferences;
     public ComputeShader shader;
 
     private VoxelChunk[] chunks;
     private float voxelSize, halfSize;
     private int fillTypeIndex, radiusIndex, stencilIndex;
-    public int[] statePositions;
+    private int[] statePositions;
 
     ComputeBuffer verticeBuffer;
     ComputeBuffer triangleBuffer;
     ComputeBuffer triCountBuffer;
     ComputeBuffer stateBuffer;
 
-    public bool updatingMap = false;
+    public float[,] noiseMap;
+    private MapDisplay mapDisplay;
+    [Range(0.3f, 100)]
+    public float scaleNoise;
+    public bool useRandomSeed;
+    public float seed = 0;
 
     private VoxelStencil[] stencils = {
         new VoxelStencil(),
@@ -33,35 +38,57 @@ public class VoxelMap : MonoBehaviour {
     };
 
     private void Awake() {
-        halfSize = chunkSize * 0.5f * chunkResolution;
-        voxelSize = chunkSize / voxelResolution;
-        statePositions = new int[(voxelResolution + 1) * (voxelResolution + 1)];
+        Generate();
     }
 
-    private void Update() {
-        if ((Application.isPlaying && !updatingMap)) {
-            updatingMap = true;
+    private void Generate() {
+        noiseMap = new float[voxelResolution * chunkResolution, voxelResolution * chunkResolution];
+        mapDisplay = FindObjectOfType<MapDisplay>();
 
-            CreateBuffers();
+        halfSize = chunkSize * 0.5f * chunkResolution;
+        voxelSize = (float)chunkSize / (float)voxelResolution;
+        statePositions = new int[(voxelResolution + 1) * (voxelResolution + 1)];
+        chunks = new VoxelChunk[chunkResolution * chunkResolution];
 
-            chunks = new VoxelChunk[chunkResolution * chunkResolution];
-            for (int i = 0, y = 0; y < chunkResolution; y++) {
-                for (int x = 0; x < chunkResolution; x++, i++) {
-                    CreateChunk(i, x, y);
-                }
-            }
+        // Clear old chunks
+        foreach (Transform child in this.transform) {
+            GameObject.DestroyImmediate(child.gameObject);
+        }
 
-            foreach (VoxelChunk chunk in chunks) {
-                TriangulateChunk(chunk);
-            }
-            BoxCollider box = gameObject.AddComponent<BoxCollider>();
-            box.size = new Vector3(chunkSize * chunkResolution, chunkSize * chunkResolution);
+        CreateBuffers();
 
-            if (!Application.isPlaying) {
-                ReleaseBuffers();
+        // Setup new chunks
+        for (int i = 0, y = 0; y < chunkResolution; y++) {
+            for (int x = 0; x < chunkResolution; x++, i++) {
+                CreateChunk(i, x, y);
             }
         }
 
+        if (useRandomSeed) {
+            seed = Random.Range(0f, 10000f);
+        }
+        foreach (VoxelChunk chunk in chunks) {
+            GenerateTerrain(chunk);
+        }
+
+
+        if (mapDisplay) { mapDisplay.DrawNoiseMap(noiseMap); }
+
+        foreach (VoxelChunk chunk in chunks) {
+            TriangulateChunk(chunk);
+        }
+
+        BoxCollider box = gameObject.GetComponent<BoxCollider>();
+
+        if (box != null) {
+            DestroyImmediate(box);
+
+        }
+        box = gameObject.AddComponent<BoxCollider>();
+        box.size = new Vector3(chunkSize * chunkResolution, chunkSize * chunkResolution);
+    }
+
+    private void Update() {
         if (Input.GetMouseButton(0)) {
             RaycastHit hitInfo;
             if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hitInfo)) {
@@ -76,11 +103,16 @@ public class VoxelMap : MonoBehaviour {
         if (Application.isPlaying) {
             ReleaseBuffers();
         }
+
+        Debug.Log(1);
+        foreach (Transform child in transform) {
+            GameObject.DestroyImmediate(child.gameObject);
+        }
     }
 
     private void CreateChunk(int i, int x, int y) {
         VoxelChunk chunk = Instantiate(voxelGridPrefab) as VoxelChunk;
-        chunk.Initialize(useVoxelPoints, voxelResolution, chunkSize);
+        chunk.Initialize(useVoxelReferences, voxelResolution, chunkSize);
         chunk.transform.parent = transform;
         chunk.transform.localPosition = new Vector3(x * chunkSize - halfSize, y * chunkSize - halfSize);
         chunks[i] = chunk;
@@ -137,7 +169,7 @@ public class VoxelMap : MonoBehaviour {
         int numPoints = (voxelResolution + 1) * (voxelResolution + 1);
         int numVoxelsPerResolution = voxelResolution - 1;
         int numVoxels = numVoxelsPerResolution * numVoxelsPerResolution;
-        int maxTriangleCount = numVoxels * 3;
+        int maxTriangleCount = numVoxels * 4;
 
         if (!Application.isPlaying || (verticeBuffer == null || numPoints != verticeBuffer.count)) {
             if (Application.isPlaying) {
@@ -238,6 +270,37 @@ public class VoxelMap : MonoBehaviour {
         }
     }
 
+
+
+    private void GenerateTerrain(VoxelChunk chunk) {
+        float centeredChunkX = chunk.transform.position.x + halfSize;
+        float centeredChunkY = chunk.transform.position.y + halfSize;
+
+        foreach (Voxel voxel in chunk.voxels) {
+            //OFF
+            // voxel.state = false;
+
+            //ON
+            // voxel.state = true;
+
+            //RANDOM
+            //voxel.state = UnityEngine.Random.Range(0, 2) == 0 ? false : true;
+
+            //PERLIN
+            int x = Mathf.RoundToInt(voxel.position.x * (voxelResolution - 1) + centeredChunkX * voxelResolution);
+            int y = Mathf.RoundToInt(voxel.position.y * (voxelResolution - 1) + centeredChunkY * voxelResolution);
+
+            float scaledX = x / scaleNoise / voxelResolution;
+            float scaledY = y / scaleNoise / voxelResolution;
+
+            noiseMap[(int)x, (int)y] = Mathf.PerlinNoise(scaledX + seed, scaledY + seed);
+            voxel.state = Mathf.PerlinNoise(scaledX + seed, scaledY + seed) > 0.5f ? false : true;
+
+            //SIMPLEX
+        }
+    }
+
+
     struct Triangle {
 #pragma warning disable 649 // disable unassigned variable warning
         public Vector2 a;
@@ -266,6 +329,13 @@ public class VoxelMap : MonoBehaviour {
         radiusIndex = GUILayout.SelectionGrid(radiusIndex, radiusNames, 6);
         GUILayout.Label("Stencil");
         stencilIndex = GUILayout.SelectionGrid(stencilIndex, stencilNames, 2);
+        GUILayout.Label("Regenerate");
+        if (GUI.Button(new Rect(0, 175, 150f, 20f), "Generate")) {
+            foreach (Transform child in this.transform) {
+                Destroy(child.gameObject);
+            }
+            Generate();
+        }
         GUILayout.EndArea();
     }
 }

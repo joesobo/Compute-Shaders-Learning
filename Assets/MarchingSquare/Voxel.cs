@@ -16,8 +16,6 @@ public class Voxel {
         xEdgePosition.x += size * 0.5f;
         yEdgePosition = position;
         yEdgePosition.y += size * 0.5f;
-
-        state = UnityEngine.Random.Range(0, 2) == 0 ? false : true;
     }
 
     public Voxel() { }
