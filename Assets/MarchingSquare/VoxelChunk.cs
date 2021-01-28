@@ -15,6 +15,7 @@ public class VoxelChunk : MonoBehaviour {
     private float voxelSize, gridSize;
     private List<Material> voxelMaterials = new List<Material>();
     public Mesh mesh;
+    public Material material;
     private Vector3[] vertices;
     private int[] triangles;
 
@@ -32,6 +33,8 @@ public class VoxelChunk : MonoBehaviour {
             }
         }
 
+        GetComponent<MeshRenderer>().material = material = new Material(Shader.Find("Shader Graphs/Point URP GPU"));
+        material.enableInstancing = true;
         GetComponent<MeshFilter>().mesh = mesh = new Mesh();
         mesh.name = "VoxelChunk Mesh";
 

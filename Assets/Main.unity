@@ -154,14 +154,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   chunkSize: 1
-  voxelResolution: 80
+  voxelResolution: 96
   chunkResolution: 8
   voxelGridPrefab: {fileID: 7782940093856803487, guid: 3865adb193875b742ba5dd4d18ee8c72, type: 3}
   useVoxelReferences: 0
   shader: {fileID: 7200000, guid: 82bebc4886c0ef2479b2a7ebe8b6f899, type: 3}
   scaleNoise: 1
-  useRandomSeed: 1
+  useRandomSeed: 0
   seed: 10
+  textures: []
+  materials: []
 --- !u!4 &695595396
 Transform:
   m_ObjectHideFlags: 0
@@ -446,7 +448,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 32
+  orthographic size: 1
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2

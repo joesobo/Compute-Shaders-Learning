@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 534832626370618151}
   - component: {fileID: 7782940093856803487}
   m_Layer: 0
-  m_Name: Voxel Grid
+  m_Name: Voxel Chunk
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -60,7 +60,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: f12654de5e5f42c48994278ac926ee96, type: 2}
+  - {fileID: 2100000, guid: 2a2113f63f5d93c4b8c01ae899385ab1, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -100,3 +100,5 @@ MonoBehaviour:
   xNeighbor: {fileID: 0}
   yNeighbor: {fileID: 0}
   xyNeighbor: {fileID: 0}
+  voxels: []
+  mesh: {fileID: 0}
